@@ -127,16 +127,35 @@ export class SchedulerService {
   private async createDailyCalendarReminders(reminder: DailyReminderSchedule) {
     try {
       // Get pending PRs for the reminder
-      const pendingPRs = this.getPendingPRs()
+      const pendingPRs = await this.getPendingPRs()
+      if (pendingPRs.length === 0) {
+        console.log('[scheduler] No pending PRs; skipping calendar reminder creation')
+        return
+      }
       await googleCalendarService.createDailyReminders(reminder.email, pendingPRs)
     } catch (error) {
       console.error('Failed to create daily calendar reminders:', error)
     }
   }
 
-  private getPendingPRs(): PRItem[] {
-    // This would typically load from your data store
-    // For now, return empty array - you'll need to integrate with your data layer
+  private async getPendingPRs(): Promise<PRItem[]> {
+    const pendingStatuses: Array<PRItem['status']> = ['initial', 'in_review', 'approved']
+    try {
+      const res = await fetch('/api/prs')
+      if (res.ok) {
+        const json = await res.json()
+        const prs: PRItem[] = Array.isArray(json?.prs) ? json.prs : []
+        return prs.filter((p) => pendingStatuses.includes(p.status))
+      }
+    } catch (_) {}
+    try {
+      const raw = typeof window !== 'undefined' ? localStorage.getItem('pr-tracker-data') : null
+      if (raw) {
+        const data = JSON.parse(raw)
+        const prs: PRItem[] = Array.isArray(data?.prs) ? data.prs : []
+        return prs.filter((p) => pendingStatuses.includes(p.status))
+      }
+    } catch (_) {}
     return []
   }
 
@@ -201,7 +220,11 @@ export class SchedulerService {
   private async sendDailyReminder(reminder: DailyReminderSchedule) {
     try {
       // Get pending PRs
-      const pendingPRs = this.getPendingPRs()
+      const pendingPRs = await this.getPendingPRs()
+      if (pendingPRs.length === 0) {
+        console.log('[scheduler] No pending PRs; skipping email reminder')
+        return
+      }
       
       // Send email reminder
       const success = await mailerSendService.sendPendingPRsReminder(

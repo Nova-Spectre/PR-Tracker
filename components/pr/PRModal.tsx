@@ -1,15 +1,16 @@
 "use client"
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { PRItem, Priority, Category } from '@/lib/types'
 import { v4 as uuidv4 } from 'uuid'
+import { cachedFetchJSON } from '@/lib/clientCache'
 
 export default function PRModal({ open, onClose, onCreate }: { open: boolean; onClose: () => void; onCreate: (pr: PRItem) => void }) {
   const [title, setTitle] = useState('')
-  const [project, setProject] = useState('')
+  const [project, setProject] = useState('General')
   const [service, setService] = useState('')
   const [category, setCategory] = useState<Category>('project')
-  const [author, setAuthor] = useState('')
+  const [author, setAuthor] = useState('Shubham')
   const [description, setDescription] = useState('')
   const [priority, setPriority] = useState<Priority>('medium')
   const [link, setLink] = useState('')
@@ -17,6 +18,45 @@ export default function PRModal({ open, onClose, onCreate }: { open: boolean; on
   const [scheduledTime, setScheduledTime] = useState('')
   const [emailReminder, setEmailReminder] = useState(false)
   const [calendarEvent, setCalendarEvent] = useState(false)
+  const [projects, setProjects] = useState<string[]>(['General'])
+  const [services, setServices] = useState<string[]>([])
+  const [showAddWorkspace, setShowAddWorkspace] = useState<null | 'project' | 'service'>(null)
+  const [newWorkspaceName, setNewWorkspaceName] = useState('')
+
+  useEffect(() => {
+    if (!open) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        // load defaults
+        try {
+          const dj = await cachedFetchJSON<{ defaults?: any }>('/api/defaults', 300000)
+          const d = dj?.defaults || {}
+          if (!cancelled) {
+            if (d?.defaultProject) setProject(String(d.defaultProject))
+            if (d?.defaultService) setService(String(d.defaultService))
+            if (d?.defaultAuthor) setAuthor(String(d.defaultAuthor))
+          }
+        } catch (_) {}
+        const pJson = await cachedFetchJSON<{ items: any[] }>('/api/workspaces?type=project', 300000)
+        const sJson = await cachedFetchJSON<{ items: any[] }>('/api/workspaces?type=service', 300000)
+        const pItems: any[] = Array.isArray(pJson.items) ? pJson.items : []
+        const sItems: any[] = Array.isArray(sJson.items) ? sJson.items : []
+        const pNames: string[] = Array.from(new Set(pItems.map((x: any) => String(x?.name ?? '')).filter(Boolean)))
+        const sNames: string[] = Array.from(new Set(sItems.map((x: any) => String(x?.name ?? '')).filter(Boolean)))
+        const pList: string[] = ['General', ...pNames]
+        const sList: string[] = [...sNames]
+        if (!cancelled) {
+          setProjects(pList)
+          setServices(sList)
+          if (!pList.includes(project)) setProject(pList[0] || 'General')
+        }
+      } catch (e) {
+        // ignore; keep defaults
+      }
+    })()
+    return () => { cancelled = true }
+  }, [open])
 
   if (!open) return null
 
@@ -27,7 +67,7 @@ export default function PRModal({ open, onClose, onCreate }: { open: boolean; on
       project: category === 'project' ? project : '',
       service: category === 'service' ? service : '',
       category,
-      author: author || 'unknown',
+      author: author || 'Shubham',
       description,
       status: 'initial',
       priority,
@@ -90,13 +130,27 @@ export default function PRModal({ open, onClose, onCreate }: { open: boolean; on
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {category === 'project' ? (
               <div>
-                <label className="text-sm font-medium">Project Name *</label>
-                <input className="input mt-1" value={project} onChange={(e) => setProject(e.target.value)} placeholder="e.g. Frontend App" />
+                <label className="text-sm font-medium">Project *</label>
+                <div className="flex gap-2">
+                  <select className="input mt-1 flex-1" value={project} onChange={(e) => setProject(e.target.value)}>
+                    {projects.map((p) => (
+                      <option key={p} value={p}>{p}</option>
+                    ))}
+                  </select>
+                  <button type="button" className="btn mt-1" onClick={() => { setShowAddWorkspace('project'); setNewWorkspaceName('') }}>Add</button>
+                </div>
               </div>
             ) : (
               <div>
-                <label className="text-sm font-medium">Service Name *</label>
-                <input className="input mt-1" value={service} onChange={(e) => setService(e.target.value)} placeholder="e.g. User Service" />
+                <label className="text-sm font-medium">Service *</label>
+                <div className="flex gap-2">
+                  <select className="input mt-1 flex-1" value={service} onChange={(e) => setService(e.target.value)}>
+                    {services.map((s) => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                  <button type="button" className="btn mt-1" onClick={() => { setShowAddWorkspace('service'); setNewWorkspaceName('') }}>Add</button>
+                </div>
               </div>
             )}
             <div>
@@ -146,6 +200,63 @@ export default function PRModal({ open, onClose, onCreate }: { open: boolean; on
             Create PR
           </button>
         </div>
+        {/* Add Project/Service Mini Modal */}
+        {showAddWorkspace && (
+          <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+            <div className="card p-4 w-full max-w-sm">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-lg font-semibold">Add {showAddWorkspace === 'project' ? 'Project' : 'Service'}</h3>
+                <button className="btn" onClick={() => setShowAddWorkspace(null)}>Close</button>
+              </div>
+              <input
+                className="input w-full mb-3"
+                value={newWorkspaceName}
+                onChange={(e) => setNewWorkspaceName(e.target.value)}
+                placeholder={showAddWorkspace === 'project' ? 'Project name' : 'Service name'}
+              />
+              <div className="flex justify-end gap-2">
+                <button className="btn" onClick={() => setShowAddWorkspace(null)}>Cancel</button>
+                <button
+                  className="btn btn-primary"
+                  disabled={!newWorkspaceName.trim()}
+                  onClick={async () => {
+                    try {
+                      const res = await fetch('/api/workspaces', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name: newWorkspaceName.trim(), type: showAddWorkspace })
+                      })
+                      if (!res.ok && res.status !== 409) throw new Error('Failed to add')
+                      // Refresh lists
+                      const pRes = await fetch('/api/workspaces?type=project')
+                      const sRes = await fetch('/api/workspaces?type=service')
+                      const pJson = pRes.ok ? await pRes.json() : { items: [] }
+                      const sJson = sRes.ok ? await sRes.json() : { items: [] }
+                      const pItems: any[] = Array.isArray(pJson.items) ? pJson.items : []
+                      const sItems: any[] = Array.isArray(sJson.items) ? sJson.items : []
+                      const pNames: string[] = Array.from(new Set(pItems.map((x: any) => String(x?.name ?? '')).filter(Boolean)))
+                      const sNames: string[] = Array.from(new Set(sItems.map((x: any) => String(x?.name ?? '')).filter(Boolean)))
+                      const p: string[] = ['General', ...pNames]
+                      const s: string[] = [...sNames]
+                      setProjects(p)
+                      setServices(s)
+                      if (showAddWorkspace === 'project') {
+                        setProject(newWorkspaceName.trim())
+                      } else {
+                        setService(newWorkspaceName.trim())
+                      }
+                      setShowAddWorkspace(null)
+                    } catch (e) {
+                      setShowAddWorkspace(null)
+                    }
+                  }}
+                >
+                  Save
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

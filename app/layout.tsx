@@ -1,5 +1,6 @@
 import './globals.css'
 import type { Metadata } from 'next'
+import { ThemeProvider } from '@/lib/theme'
 
 export const metadata: Metadata = {
   title: 'PR Tracker Dashboard',
@@ -10,7 +11,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body className="bg-background text-text min-h-screen transition-colors">
-        {children}
+        <ThemeProvider>
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   )

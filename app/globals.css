@@ -4,12 +4,12 @@
 
 :root {
   color-scheme: dark;
-  --background: #0f172a;
-  --surface: #111827;
-  --muted: #1f2937;
-  --border: #374151;
-  --text: #e5e7eb;
-  --accent: #60a5fa;
+  --background: #0b1220;
+  --surface: #0f172a;
+  --muted: #1b2845;
+  --border: #2b3a67;
+  --text: #e6f1ff;
+  --accent: #7c3aed; /* vibrant purple */
   --success: #10b981;
   --warning: #f59e0b;
   --danger: #ef4444;
@@ -17,12 +17,12 @@
 
 :root.light {
   color-scheme: light;
-  --background: #ffffff;
-  --surface: #f9fafb;
-  --muted: #f3f4f6;
-  --border: #d1d5db;
-  --text: #111827;
-  --accent: #3b82f6;
+  --background: #f8fbff;
+  --surface: #ffffff;
+  --muted: #eef2ff;
+  --border: #c7d2fe;
+  --text: #0f172a;
+  --accent: #6366f1; /* indigo */
   --success: #059669;
   --warning: #d97706;
   --danger: #dc2626;
@@ -44,12 +44,10 @@ body {
   @apply inline-flex items-center gap-2 px-3 py-2 rounded-md border border-border bg-muted hover:bg-border transition-colors text-sm;
 }
 
-.btn-primary {
-  @apply bg-accent/20 border-accent/40 hover:bg-accent/30 text-white;
-}
+.btn-primary { @apply border-accent/60 text-white; background: linear-gradient(135deg, var(--accent) 0%, #22d3ee 100%); }
+.btn-primary:hover { filter: brightness(1.05); }
 
-.input {
-  @apply w-full bg-surface border border-border rounded-md px-3 py-2 outline-none focus:ring-2 focus:ring-accent/40;
-}
+.input { @apply w-full bg-surface border border-border rounded-md px-3 py-2 outline-none focus:ring-2; box-shadow: 0 0 0 2px transparent; }
+.input:focus { box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 40%, transparent); }
 
 
