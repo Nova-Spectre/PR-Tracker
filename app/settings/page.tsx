@@ -49,7 +49,7 @@ export default function SettingsPage() {
       <main className="max-w-7xl mx-auto w-full px-4 py-6 flex-1">
         <div className="mb-6">
           <h1 className="text-2xl font-bold mb-2">PR Tracker Settings</h1>
-          <p className="text-gray-600">Configure email notifications and calendar integrations</p>
+          <p className="text-subtle">Configure email notifications and calendar integrations</p>
         </div>
 
         <div className="flex gap-4 mb-6">
@@ -122,7 +122,7 @@ export default function SettingsPage() {
                     defaultValue={process.env.MAILERSEND_API_KEY || ''}
                     readOnly
                   />
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-muted mt-1">
                     Set MAILERSEND_API_KEY in your .env file
                   </p>
                 </div>
@@ -137,7 +137,7 @@ export default function SettingsPage() {
                       defaultValue={process.env.MAILERSEND_FROM_EMAIL || ''}
                       readOnly
                     />
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-muted mt-1">
                       Set MAILERSEND_FROM_EMAIL in your .env file
                     </p>
                   </div>
@@ -150,14 +150,14 @@ export default function SettingsPage() {
                       defaultValue={process.env.MAILERSEND_FROM_NAME || ''}
                       readOnly
                     />
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-muted mt-1">
                       Set MAILERSEND_FROM_NAME in your .env file
                     </p>
                   </div>
                 </div>
 
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <h4 className="font-medium text-blue-800 mb-2">📧 Email Features</h4>
+                  <h4 className="font-medium mb-2">📧 Email Features</h4>
                   <ul className="text-sm text-blue-700 space-y-1">
                     <li>• Individual PR reminders</li>
                     <li>• Daily summary emails at 11:00 AM, 3:30 PM, 5:45 PM</li>
@@ -185,7 +185,7 @@ export default function SettingsPage() {
                     defaultValue={process.env.GOOGLE_CLIENT_ID || ''}
                     readOnly
                   />
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-muted mt-1">
                     Set GOOGLE_CLIENT_ID in your .env file
                   </p>
                 </div>
@@ -200,7 +200,7 @@ export default function SettingsPage() {
                       defaultValue={process.env.GOOGLE_API_KEY || ''}
                       readOnly
                     />
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-muted mt-1">
                       Set GOOGLE_API_KEY in your .env file
                     </p>
                   </div>
@@ -213,14 +213,14 @@ export default function SettingsPage() {
                       defaultValue={process.env.GOOGLE_CALENDAR_ID || 'primary'}
                       readOnly
                     />
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-muted mt-1">
                       Set GOOGLE_CALENDAR_ID in your .env file (default: primary)
                     </p>
                   </div>
                 </div>
 
                 <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                  <h4 className="font-medium text-green-800 mb-2">📅 Calendar Features</h4>
+                  <h4 className="font-medium mb-2">📅 Calendar Features</h4>
                   <ul className="text-sm text-green-700 space-y-1">
                     <li>• Individual PR review reminders</li>
                     <li>• Daily recurring reminders</li>
@@ -236,8 +236,8 @@ export default function SettingsPage() {
               <h3 className="text-lg font-semibold mb-4">🔧 Environment Setup</h3>
               
               <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                <h4 className="font-medium text-gray-800 mb-2">Required .env Variables:</h4>
-                <pre className="text-sm text-gray-700 bg-white p-3 rounded border overflow-x-auto">
+                <h4 className="font-medium mb-2">Required .env Variables:</h4>
+                <pre className="text-sm bg-white text-text p-3 rounded border overflow-x-auto">
 {`# MailerSend Configuration
 MAILERSEND_API_KEY=your_mailersend_api_key_here
 MAILERSEND_FROM_EMAIL=noreply@yourdomain.com
@@ -248,7 +248,7 @@ GOOGLE_CLIENT_ID=your_google_oauth_client_id
 GOOGLE_API_KEY=your_google_api_key
 GOOGLE_CALENDAR_ID=primary`}
                 </pre>
-                <p className="text-xs text-gray-600 mt-2">
+                <p className="text-xs text-muted mt-2">
                   Create a .env.local file in your project root with these variables
                 </p>
               </div>
@@ -259,7 +259,7 @@ GOOGLE_CALENDAR_ID=primary`}
         {activeTab === 'defaults' && (
           <div className="card p-6 space-y-4">
             <h3 className="text-lg font-semibold">Default Values</h3>
-            <p className="text-sm text-gray-600">These values prefill forms but are optional; users can change them anytime.</p>
+            <p className="text-sm text-subtle">These values prefill forms but are optional; users can change them anytime.</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-medium">Default Project</label>

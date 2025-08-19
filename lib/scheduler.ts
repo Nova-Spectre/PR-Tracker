@@ -1,4 +1,5 @@
 import { PRItem } from './types'
+import { STORAGE_KEY } from './data'
 import { mailerSendService } from './mailer'
 import { googleCalendarService } from './calendar'
 
@@ -149,7 +150,7 @@ export class SchedulerService {
       }
     } catch (_) {}
     try {
-      const raw = typeof window !== 'undefined' ? localStorage.getItem('pr-tracker-data') : null
+      const raw = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null
       if (raw) {
         const data = JSON.parse(raw)
         const prs: PRItem[] = Array.isArray(data?.prs) ? data.prs : []

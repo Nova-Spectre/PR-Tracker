@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Board from '@/components/board/Board'
-import { defaultColumns, emptyDataSet, loadData, saveData } from '@/lib/data'
+import { STORAGE_KEY, defaultColumns, emptyDataSet, loadData, saveData } from '@/lib/data'
+import type { DataSet } from '@/lib/types'
 import { Plus, Settings } from '@/components/icons'
 import PRModal from '@/components/pr/PRModal'
 import WorkspaceTabs from '@/components/workspaces/WorkspaceTabs'
@@ -14,15 +15,16 @@ export default function HomePage() {
   const [category, setCategory] = useState<'all' | 'project' | 'service'>('all')
   const [groupBy, setGroupBy] = useState<'none' | 'project' | 'service'>('none')
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [dataVersion, setDataVersion] = useState(0)
-
-  const { columns, prs, projects, services } = useMemo(() => loadData(), [dataVersion])
+  const [data, setData] = useState<DataSet>(emptyDataSet)
 
   // Bootstrap data: if local data is missing, try loading from DB; fallback to defaults
   useEffect(() => {
     if (typeof window === 'undefined') return
-    const existing = localStorage.getItem('pr-tracker-data')
-    if (existing) return
+    const existing = localStorage.getItem(STORAGE_KEY)
+    if (existing) {
+      setData(loadData())
+      return
+    }
     ;(async () => {
       try {
         console.log('[ui] bootstrap: attempting to load PRs from DB')
@@ -30,26 +32,29 @@ export default function HomePage() {
         if (res.ok) {
           const { prs } = await res.json()
           if (Array.isArray(prs) && prs.length > 0) {
-            saveData({ columns: defaultColumns, prs, projects: [], services: [] })
-            setDataVersion((v) => v + 1)
+            const next: DataSet = { columns: defaultColumns, prs, projects: [], services: [] }
+            saveData(next)
+            setData(next)
             toast.success('Loaded PRs from database')
             return
           }
         }
         console.log('[ui] bootstrap: no DB PRs, seeding defaults')
-        saveData({ ...emptyDataSet, columns: defaultColumns })
-        setDataVersion((v) => v + 1)
+        const seeded: DataSet = { ...emptyDataSet, columns: defaultColumns }
+        saveData(seeded)
+        setData(seeded)
       } catch (e) {
         console.error('[ui] bootstrap error', e)
         // Ensure UI still works with defaults
-        saveData({ ...emptyDataSet, columns: defaultColumns })
-        setDataVersion((v) => v + 1)
+        const seeded: DataSet = { ...emptyDataSet, columns: defaultColumns }
+        saveData(seeded)
+        setData(seeded)
       }
     })()
   }, [])
 
   const filteredPRs = useMemo(() => {
-    let filtered = prs
+    let filtered = data.prs
     if (workspace !== 'All Projects') {
       filtered = filtered.filter(p => 
         (p.category === 'project' && p.project === workspace) ||
@@ -60,13 +65,13 @@ export default function HomePage() {
       filtered = filtered.filter(p => p.category === category)
     }
     return filtered
-  }, [prs, workspace, category])
+  }, [data.prs, workspace, category])
 
-  const allWorkspaces = ['All Projects', ...(projects ?? []).map(p => p.name), ...(services ?? []).map(s => s.name)]
+  const allWorkspaces = ['All Projects', ...(data.projects ?? []).map(p => p.name), ...(data.services ?? []).map(s => s.name)]
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Toaster position="top-right" />
+      <Toaster position="bottom-center" />
       <header className="w-full border-b border-border bg-surface/80 backdrop-blur sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -124,13 +129,13 @@ export default function HomePage() {
 
       <main className="max-w-7xl mx-auto w-full px-4 py-6 flex-1">
         <Board
-          initialColumns={columns}
+          initialColumns={data.columns}
           prs={filteredPRs}
           filterProject={workspace === 'All Projects' ? undefined : workspace}
           groupBy={groupBy}
           onChange={(updated) => {
             saveData(updated)
-            setDataVersion((v) => v + 1)
+            setData(updated)
             toast.success('Board updated')
           }}
         />
@@ -151,17 +156,17 @@ export default function HomePage() {
             const { pr: created } = await res.json()
             console.log('[ui] created PR', created)
 
-            const current = loadData()
-            const next = { ...current, prs: [created, ...current.prs] }
+            const current = data
+            const next: DataSet = { ...current, prs: [created, ...current.prs] }
             saveData(next)
-            setDataVersion((v) => v + 1)
+            setData(next)
             toast.success('PR added (DB)')
           } catch (e) {
             console.error('[ui] create PR failed, falling back to local', e)
-            const current = loadData()
-            const next = { ...current, prs: [pr, ...current.prs] }
+            const current = data
+            const next: DataSet = { ...current, prs: [pr, ...current.prs] }
             saveData(next)
-            setDataVersion((v) => v + 1)
+            setData(next)
             toast.error('DB unavailable, saved locally')
           }
         }}

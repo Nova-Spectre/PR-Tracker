@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@hello-pangea/dnd": "^16.5.0",
+    "@infisical/sdk": "^4.0.4",
     "mongoose": "^8.6.0",
     "next": "14.2.6",
     "react": "18.3.1",

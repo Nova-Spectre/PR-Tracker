@@ -1,6 +1,6 @@
 import { BoardColumns, DataSet, PRItem } from './types'
 
-const STORAGE_KEY = 'pr-tracker-data-v1'
+export const STORAGE_KEY = 'pr-tracker-data-v1'
 
 export const defaultColumns: BoardColumns = {
   initial: { id: 'initial', title: 'Initial' },

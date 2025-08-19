@@ -67,7 +67,7 @@ export default function DailyRemindersManager() {
       </div>
 
       {reminders.length === 0 ? (
-        <div className="text-center py-8 text-gray-500">
+        <div className="text-center py-8 text-muted">
           <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
           <p>No daily reminders configured</p>
           <p className="text-sm">Setup daily reminders to receive notifications at 11:00 AM, 3:30 PM, and 5:45 PM</p>
@@ -81,9 +81,9 @@ export default function DailyRemindersManager() {
                   <div className="flex items-center gap-2 mb-2">
                     <Mail className="w-4 h-4" />
                     <span className="font-medium">{reminder.email}</span>
-                    <span className="text-sm text-gray-500">({reminder.teamName})</span>
+                    <span className="text-sm text-muted">({reminder.teamName})</span>
                   </div>
-                  <div className="text-sm text-gray-600">
+                  <div className="text-sm text-muted">
                     <p>Reminder times: 11:00 AM, 3:30 PM, 5:45 PM</p>
                     <p>Status: {reminder.active ? 'Active' : 'Inactive'}</p>
                     <p>Last sent: {new Date(reminder.lastSent).toLocaleDateString()}</p>
