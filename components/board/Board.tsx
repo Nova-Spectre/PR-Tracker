@@ -33,6 +33,18 @@ export default function Board({ initialColumns, prs, filterProject, onChange, gr
     return set.size ? Array.from(set).sort() : ['__all__']
   }, [filtered, groupBy])
 
+  function handleEdit(updated: PRItem) {
+    const prIndex = prs.findIndex((p) => p.id === updated.id)
+    if (prIndex === -1) return
+    const nextPrs = [...prs]
+    nextPrs[prIndex] = { ...nextPrs[prIndex], ...updated }
+    const projectSet = new Set(nextPrs.filter(p => p.category === 'project').map((p) => p.project))
+    const serviceSet = new Set(nextPrs.filter(p => p.category === 'service' && p.service).map((p) => p.service!))
+    const projects = Array.from(projectSet).map((name) => ({ name, category: 'project' as const }))
+    const services = Array.from(serviceSet).map((name) => ({ name, category: 'service' as const }))
+    onChange({ columns, prs: nextPrs, projects, services })
+  }
+
   function handleDragEnd(result: DropResult) {
     const { destination, source, draggableId } = result
     if (!destination) return
@@ -80,7 +92,7 @@ export default function Board({ initialColumns, prs, filterProject, onChange, gr
                     return (
                       <div key={`${col.id}-${gk}`} className="space-y-2">
                         {groupBy !== 'none' && (
-                          <div className="text-xs uppercase tracking-wide text-gray-400 border-b border-border pb-1">{gk}</div>
+                          <div className="text-xs uppercase tracking-wide text-subtle border-b border-border pb-1">{gk}</div>
                         )}
                         {items.map((pr, index) => (
                           <Draggable draggableId={pr.id} index={index} key={pr.id}>
@@ -93,7 +105,7 @@ export default function Board({ initialColumns, prs, filterProject, onChange, gr
                                   snapshot.isDragging ? 'rotate-2 scale-105 shadow-2xl' : ''
                                 }`}
                               >
-                                <PRCard pr={pr} />
+                                <PRCard pr={pr} onEdit={handleEdit} />
                               </div>
                             )}
                           </Draggable>

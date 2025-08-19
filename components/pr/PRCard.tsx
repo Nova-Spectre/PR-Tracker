@@ -3,9 +3,10 @@
 import { PRItem } from '@/lib/types'
 import { useState } from 'react'
 import PRDetails from './PRDetails'
+import type { PRItem as PRItemType } from '@/lib/types'
 import PriorityTag from '../ui/PriorityTag'
 
-export default function PRCard({ pr }: { pr: PRItem }) {
+export default function PRCard({ pr, onEdit }: { pr: PRItem; onEdit?: (updated: PRItemType) => void }) {
   const [open, setOpen] = useState(false)
 
   const handleCardClick = (e: React.MouseEvent) => {
@@ -15,22 +16,22 @@ export default function PRCard({ pr }: { pr: PRItem }) {
 
   return (
     <>
-      <div className="w-full text-left card p-3 hover:border-accent/40 cursor-pointer" onClick={handleCardClick}>
+      <div className="w-full text-left card pr-card p-3 hover:border-accent/40 cursor-pointer" onClick={handleCardClick}>
         <div className="space-y-2">
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0">
-              <div className="font-medium text-gray-100 truncate">{pr.title}</div>
-              <div className="text-xs text-gray-400 overflow-hidden text-ellipsis max-h-[2.5rem]">{pr.description}</div>
+              <div className="font-medium text-text truncate">{pr.title}</div>
+              <div className="text-xs text-subtle overflow-hidden text-ellipsis max-h-[2.5rem]">{pr.description}</div>
             </div>
             <PriorityTag priority={pr.priority} />
           </div>
           
-          <div className="flex items-center gap-2 text-xs text-gray-400">
-            <span>{pr.author}</span>
+          <div className="flex items-center gap-2 text-xs text-subtle">
+            <span className="truncate">{pr.author}</span>
             <span>•</span>
             <span className="capitalize">{pr.category}</span>
             <span>•</span>
-            <span>{pr.category === 'project' ? pr.project : pr.service}</span>
+            <span className="truncate flex-1 min-w-0">{pr.category === 'project' ? pr.project : pr.service}</span>
           </div>
 
           {pr.links && pr.links.length > 0 && (
@@ -51,7 +52,7 @@ export default function PRCard({ pr }: { pr: PRItem }) {
           )}
 
           {(pr.scheduledDate || pr.emailReminder || pr.calendarEvent) && (
-            <div className="flex items-center gap-2 text-xs text-gray-500">
+            <div className="flex items-center gap-2 text-xs text-muted">
               {pr.scheduledDate && (
                 <span>📅 {pr.scheduledDate} {pr.scheduledTime}</span>
               )}
@@ -62,7 +63,7 @@ export default function PRCard({ pr }: { pr: PRItem }) {
         </div>
       </div>
 
-      <PRDetails open={open} onClose={() => setOpen(false)} pr={pr} />
+      <PRDetails open={open} onClose={() => setOpen(false)} pr={pr} onEdit={onEdit} />
     </>
   )
 }

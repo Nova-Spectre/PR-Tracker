@@ -9,15 +9,15 @@ export default {
   theme: {
     extend: {
       colors: {
-        background: '#0f172a',
-        surface: '#111827',
-        muted: '#1f2937',
-        border: '#374151',
-        text: '#e5e7eb',
-        accent: '#60a5fa',
-        success: '#10b981',
-        warning: '#f59e0b',
-        danger: '#ef4444'
+        background: 'var(--background)',
+        surface: 'var(--surface)',
+        muted: 'var(--muted)',
+        border: 'var(--border)',
+        text: 'var(--text)',
+        accent: 'var(--accent)',
+        success: 'var(--success)',
+        warning: 'var(--warning)',
+        danger: 'var(--danger)'
       }
     }
   },
