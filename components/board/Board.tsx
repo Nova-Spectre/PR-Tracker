@@ -11,14 +11,27 @@ type Props = {
   prs: PRItem[]
   filterProject?: string
   onChange: (next: DataSet) => void
+  groupBy?: 'none' | 'project' | 'service'
 }
 
-export default function Board({ initialColumns, prs, filterProject, onChange }: Props) {
+export default function Board({ initialColumns, prs, filterProject, onChange, groupBy = 'none' }: Props) {
   const columns = useMemo(() => initialColumns, [initialColumns])
   const filtered = useMemo(
     () => (filterProject ? prs.filter((p) => p.project === filterProject) : prs),
     [prs, filterProject]
   )
+
+  const groupKeys = useMemo(() => {
+    if (groupBy === 'none') return ['__all__']
+    const key = groupBy
+    const set = new Set<string>()
+    for (const p of filtered) {
+      const v = (p as any)[key]
+      if (v) set.add(String(v))
+    }
+    // Ensure at least one group to render
+    return set.size ? Array.from(set).sort() : ['__all__']
+  }, [filtered, groupBy])
 
   function handleDragEnd(result: DropResult) {
     const { destination, source, draggableId } = result
@@ -61,24 +74,33 @@ export default function Board({ initialColumns, prs, filterProject, onChange }: 
                     snapshot.isDraggingOver ? 'bg-accent/10 border-accent/40' : ''
                   }`}
                 >
-                  {filtered
-                    .filter((p) => p.status === col.id)
-                    .map((pr, index) => (
-                      <Draggable draggableId={pr.id} index={index} key={pr.id}>
-                        {(provided, snapshot) => (
-                          <div
-                            ref={provided.innerRef}
-                            {...provided.draggableProps}
-                            {...provided.dragHandleProps}
-                            className={`transition-transform ${
-                              snapshot.isDragging ? 'rotate-2 scale-105 shadow-2xl' : ''
-                            }`}
-                          >
-                            <PRCard pr={pr} />
-                          </div>
+                  {groupKeys.map((gk) => {
+                    const items = filtered.filter((p) => p.status === col.id && (groupBy === 'none' || (p as any)[groupBy] === gk))
+                    if (!items.length) return null
+                    return (
+                      <div key={`${col.id}-${gk}`} className="space-y-2">
+                        {groupBy !== 'none' && (
+                          <div className="text-xs uppercase tracking-wide text-gray-400 border-b border-border pb-1">{gk}</div>
                         )}
-                      </Draggable>
-                    ))}
+                        {items.map((pr, index) => (
+                          <Draggable draggableId={pr.id} index={index} key={pr.id}>
+                            {(provided, snapshot) => (
+                              <div
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                {...provided.dragHandleProps}
+                                className={`transition-transform ${
+                                  snapshot.isDragging ? 'rotate-2 scale-105 shadow-2xl' : ''
+                                }`}
+                              >
+                                <PRCard pr={pr} />
+                              </div>
+                            )}
+                          </Draggable>
+                        ))}
+                      </div>
+                    )
+                  })}
                   {provided.placeholder}
                 </div>
               )}

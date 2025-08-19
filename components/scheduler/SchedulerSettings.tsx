@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { PRItem } from '@/lib/types'
 import { schedulerService } from '@/lib/scheduler'
 import { googleCalendarService } from '@/lib/calendar'
@@ -12,11 +12,29 @@ interface Props {
 }
 
 export default function SchedulerSettings({ pr, onClose }: Props) {
-  const [email, setEmail] = useState('')
+  const [email, setEmail] = useState('therollingthunders1910@gmail.com')
   const [scheduledDate, setScheduledDate] = useState(pr.scheduledDate || '')
   const [scheduledTime, setScheduledTime] = useState(pr.scheduledTime || '')
   const [emailReminder, setEmailReminder] = useState(pr.emailReminder || false)
   const [calendarEvent, setCalendarEvent] = useState(pr.calendarEvent || false)
+
+  // Load default email from DB if present; otherwise keep existing prefill
+  useEffect(() => {
+    ;(async () => {
+      try {
+        const res = await fetch('/api/defaults')
+        if (res.ok) {
+          const j = await res.json()
+          const d = j?.defaults
+          if (d?.defaultEmail) {
+            setEmail(String(d.defaultEmail))
+          }
+        }
+      } catch (_) {
+        // keep existing prefill
+      }
+    })()
+  }, [])
 
   const handleSchedule = async () => {
     if (!email || !scheduledDate || !scheduledTime) {

@@ -7,21 +7,46 @@ import { Plus, Settings } from '@/components/icons'
 import PRModal from '@/components/pr/PRModal'
 import WorkspaceTabs from '@/components/workspaces/WorkspaceTabs'
 import toast, { Toaster } from 'react-hot-toast'
+import ThemeToggle from '@/components/ui/ThemeToggle'
 
 export default function HomePage() {
   const [workspace, setWorkspace] = useState<string>('All Projects')
   const [category, setCategory] = useState<'all' | 'project' | 'service'>('all')
+  const [groupBy, setGroupBy] = useState<'none' | 'project' | 'service'>('none')
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [dataVersion, setDataVersion] = useState(0)
 
   const { columns, prs, projects, services } = useMemo(() => loadData(), [dataVersion])
 
+  // Bootstrap data: if local data is missing, try loading from DB; fallback to defaults
   useEffect(() => {
-    if (!columns || Object.keys(columns).length === 0) {
-      saveData({ ...emptyDataSet, columns: defaultColumns })
-      setDataVersion((v) => v + 1)
-    }
-  }, [columns])
+    if (typeof window === 'undefined') return
+    const existing = localStorage.getItem('pr-tracker-data')
+    if (existing) return
+    ;(async () => {
+      try {
+        console.log('[ui] bootstrap: attempting to load PRs from DB')
+        const res = await fetch('/api/prs')
+        if (res.ok) {
+          const { prs } = await res.json()
+          if (Array.isArray(prs) && prs.length > 0) {
+            saveData({ columns: defaultColumns, prs, projects: [], services: [] })
+            setDataVersion((v) => v + 1)
+            toast.success('Loaded PRs from database')
+            return
+          }
+        }
+        console.log('[ui] bootstrap: no DB PRs, seeding defaults')
+        saveData({ ...emptyDataSet, columns: defaultColumns })
+        setDataVersion((v) => v + 1)
+      } catch (e) {
+        console.error('[ui] bootstrap error', e)
+        // Ensure UI still works with defaults
+        saveData({ ...emptyDataSet, columns: defaultColumns })
+        setDataVersion((v) => v + 1)
+      }
+    })()
+  }, [])
 
   const filteredPRs = useMemo(() => {
     let filtered = prs
@@ -48,6 +73,7 @@ export default function HomePage() {
             <span className="text-xl font-semibold">PR Tracker Dashboard</span>
           </div>
           <div className="flex items-center gap-3">
+            <ThemeToggle />
             <a href="/settings" className="btn">
               <Settings className="w-4 h-4" />
               Settings
@@ -58,7 +84,7 @@ export default function HomePage() {
           </div>
         </div>
         <div className="max-w-7xl mx-auto px-4 pb-3 space-y-3">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 flex-wrap">
             <span className="text-sm font-medium">Category:</span>
             <div className="flex gap-2">
               {(['all', 'project', 'service'] as const).map((cat) => (
@@ -70,6 +96,20 @@ export default function HomePage() {
                   onClick={() => setCategory(cat)}
                 >
                   {cat === 'all' ? 'All' : cat.charAt(0).toUpperCase() + cat.slice(1)}
+                </button>
+              ))}
+            </div>
+            <span className="text-sm font-medium">Group by:</span>
+            <div className="flex gap-2">
+              {(['none', 'project', 'service'] as const).map((g) => (
+                <button
+                  key={g}
+                  className={`px-3 py-1.5 rounded-md border text-sm ${
+                    groupBy === g ? 'bg-accent/20 border-accent/40' : 'bg-muted border-border hover:bg-border'
+                  }`}
+                  onClick={() => setGroupBy(g)}
+                >
+                  {g === 'none' ? 'None' : g.charAt(0).toUpperCase() + g.slice(1)}
                 </button>
               ))}
             </div>
@@ -87,6 +127,7 @@ export default function HomePage() {
           initialColumns={columns}
           prs={filteredPRs}
           filterProject={workspace === 'All Projects' ? undefined : workspace}
+          groupBy={groupBy}
           onChange={(updated) => {
             saveData(updated)
             setDataVersion((v) => v + 1)
@@ -98,12 +139,31 @@ export default function HomePage() {
       <PRModal
         open={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        onCreate={(pr) => {
-          const current = loadData()
-          const next = { ...current, prs: [pr, ...current.prs] }
-          saveData(next)
-          setDataVersion((v) => v + 1)
-          toast.success('PR added')
+        onCreate={async (pr) => {
+          try {
+            console.log('[ui] creating PR via API', pr)
+            const res = await fetch('/api/prs', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(pr),
+            })
+            if (!res.ok) throw new Error(`API error ${res.status}`)
+            const { pr: created } = await res.json()
+            console.log('[ui] created PR', created)
+
+            const current = loadData()
+            const next = { ...current, prs: [created, ...current.prs] }
+            saveData(next)
+            setDataVersion((v) => v + 1)
+            toast.success('PR added (DB)')
+          } catch (e) {
+            console.error('[ui] create PR failed, falling back to local', e)
+            const current = loadData()
+            const next = { ...current, prs: [pr, ...current.prs] }
+            saveData(next)
+            setDataVersion((v) => v + 1)
+            toast.error('DB unavailable, saved locally')
+          }
         }}
       />
     </div>

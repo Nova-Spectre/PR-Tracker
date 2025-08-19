@@ -151,7 +151,7 @@ export default function DailyRemindersManager() {
                   <li>• 5:45 PM - Evening reminder</li>
                 </ul>
                 <p className="text-xs text-blue-600 mt-2">
-                  You'll receive emails with pending PRs at these times daily
+                  You&apos;ll receive emails with pending PRs at these times daily
                 </p>
               </div>
 

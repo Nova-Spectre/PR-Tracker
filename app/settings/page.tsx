@@ -1,11 +1,39 @@
 "use client"
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import DailyRemindersManager from '@/components/scheduler/DailyRemindersManager'
 import { Calendar, Mail, Settings } from '@/components/icons'
 
 export default function SettingsPage() {
-  const [activeTab, setActiveTab] = useState<'reminders' | 'integrations'>('reminders')
+  const [activeTab, setActiveTab] = useState<'reminders' | 'integrations' | 'defaults' | 'workspaces'>('reminders')
+  const [projects, setProjects] = useState<string[]>(['General'])
+  const [services, setServices] = useState<string[]>([])
+  const [newWs, setNewWs] = useState({ type: 'project', name: '' })
+  const [defaults, setDefaults] = useState({ defaultProject: 'General', defaultService: '', defaultEmail: '', defaultAuthor: 'Shubham' })
+
+  useEffect(() => {
+    ;(async () => {
+      try {
+        const res = await fetch('/api/defaults')
+        if (res.ok) {
+          const j = await res.json()
+          setDefaults((d) => ({ ...d, ...(j?.defaults || {}) }))
+        }
+        const pRes = await fetch('/api/workspaces?type=project')
+        const sRes = await fetch('/api/workspaces?type=service')
+        const pJson = pRes.ok ? await pRes.json() : { items: [] }
+        const sJson = sRes.ok ? await sRes.json() : { items: [] }
+        const projNames: string[] = Array.from(
+          new Set((pJson.items || []).map((x: any) => String(x?.name ?? '')).filter(Boolean))
+        ) as string[]
+        const servNames: string[] = Array.from(
+          new Set((sJson.items || []).map((x: any) => String(x?.name ?? '')).filter(Boolean))
+        ) as string[]
+        setProjects(['General', ...projNames])
+        setServices(servNames)
+      } catch (_) {}
+    })()
+  }, [])
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -46,6 +74,26 @@ export default function SettingsPage() {
           >
             <Mail className="w-4 h-4 inline mr-2" />
             Integrations
+          </button>
+          <button
+            className={`px-4 py-2 rounded-lg border transition-colors ${
+              activeTab === 'defaults'
+                ? 'bg-accent/20 border-accent/40 text-accent'
+                : 'bg-muted border-border hover:bg-border'
+            }`}
+            onClick={() => setActiveTab('defaults')}
+          >
+            Defaults
+          </button>
+          <button
+            className={`px-4 py-2 rounded-lg border transition-colors ${
+              activeTab === 'workspaces'
+                ? 'bg-accent/20 border-accent/40 text-accent'
+                : 'bg-muted border-border hover:bg-border'
+            }`}
+            onClick={() => setActiveTab('workspaces')}
+          >
+            Workspaces
           </button>
         </div>
 
@@ -203,6 +251,142 @@ GOOGLE_CALENDAR_ID=primary`}
                 <p className="text-xs text-gray-600 mt-2">
                   Create a .env.local file in your project root with these variables
                 </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'defaults' && (
+          <div className="card p-6 space-y-4">
+            <h3 className="text-lg font-semibold">Default Values</h3>
+            <p className="text-sm text-gray-600">These values prefill forms but are optional; users can change them anytime.</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium">Default Project</label>
+                <input className="input mt-1" value={defaults.defaultProject || ''} onChange={(e) => setDefaults({ ...defaults, defaultProject: e.target.value })} placeholder="General" />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Default Service</label>
+                <input className="input mt-1" value={defaults.defaultService || ''} onChange={(e) => setDefaults({ ...defaults, defaultService: e.target.value })} placeholder="(optional)" />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Default Email</label>
+                <input className="input mt-1" type="email" value={defaults.defaultEmail || ''} onChange={(e) => setDefaults({ ...defaults, defaultEmail: e.target.value })} placeholder="your.email@company.com" />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Default Author</label>
+                <input className="input mt-1" value={defaults.defaultAuthor || ''} onChange={(e) => setDefaults({ ...defaults, defaultAuthor: e.target.value })} placeholder="Shubham" />
+              </div>
+            </div>
+            <div className="flex justify-end">
+              <button
+                className="btn btn-primary"
+                onClick={async () => {
+                  try {
+                    const res = await fetch('/api/defaults', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify(defaults)
+                    })
+                    if (!res.ok) throw new Error('Failed')
+                    alert('Defaults saved')
+                  } catch (e) {
+                    alert('Failed to save defaults')
+                  }
+                }}
+              >
+                Save Defaults
+              </button>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'workspaces' && (
+          <div className="card p-6 space-y-6">
+            <h3 className="text-lg font-semibold">Manage Workspaces</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h4 className="font-medium mb-2">Projects</h4>
+                <ul className="space-y-2">
+                  {projects.map((p) => (
+                    <li key={p} className="flex items-center justify-between">
+                      <span>{p}</span>
+                      {p !== 'General' && (
+                        <button
+                          className="btn"
+                          onClick={async () => {
+                            try {
+                              const res = await fetch(`/api/workspaces?type=project&name=${encodeURIComponent(p)}`, { method: 'DELETE' })
+                              if (res.status === 409) { alert('Cannot delete: PRs exist in this project'); return }
+                              if (!res.ok) throw new Error('Failed')
+                              setProjects((list) => list.filter((x) => x !== p))
+                            } catch (e) {
+                              alert('Delete failed')
+                            }
+                          }}
+                        >
+                          Delete
+                        </button>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <h4 className="font-medium mb-2">Services</h4>
+                <ul className="space-y-2">
+                  {services.map((s) => (
+                    <li key={s} className="flex items-center justify-between">
+                      <span>{s}</span>
+                      <button
+                        className="btn"
+                        onClick={async () => {
+                          try {
+                            const res = await fetch(`/api/workspaces?type=service&name=${encodeURIComponent(s)}`, { method: 'DELETE' })
+                            if (res.status === 409) { alert('Cannot delete: PRs exist in this service'); return }
+                            if (!res.ok) throw new Error('Failed')
+                            setServices((list) => list.filter((x) => x !== s))
+                          } catch (e) {
+                            alert('Delete failed')
+                          }
+                        }}
+                      >
+                        Delete
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+
+            <div className="border-t pt-4">
+              <h4 className="font-medium mb-2">Add Workspace</h4>
+              <div className="flex gap-2 items-center">
+                <select className="input" value={newWs.type} onChange={(e) => setNewWs({ ...newWs, type: e.target.value as any })}>
+                  <option value="project">Project</option>
+                  <option value="service">Service</option>
+                </select>
+                <input className="input flex-1" value={newWs.name} onChange={(e) => setNewWs({ ...newWs, name: e.target.value })} placeholder="Name" />
+                <button
+                  className="btn btn-primary"
+                  onClick={async () => {
+                    try {
+                      const res = await fetch('/api/workspaces', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name: newWs.name.trim(), type: newWs.type })
+                      })
+                      if (!res.ok && res.status !== 409) throw new Error('Failed')
+                      if (newWs.type === 'project') setProjects((l) => Array.from(new Set([...l, newWs.name.trim()])))
+                      else setServices((l) => Array.from(new Set([...l, newWs.name.trim()])))
+                      setNewWs({ ...newWs, name: '' })
+                    } catch (e) {
+                      alert('Add failed')
+                    }
+                  }}
+                >
+                  Add
+                </button>
               </div>
             </div>
           </div>
