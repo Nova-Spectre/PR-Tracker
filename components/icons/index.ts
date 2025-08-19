@@ -1,0 +1,6 @@
+export { Plus } from './Plus'
+export { Sun } from './Sun'
+export { Moon } from './Moon'
+export { Calendar } from './Calendar'
+export { Settings } from './Settings'
+export { Mail } from './Mail'
