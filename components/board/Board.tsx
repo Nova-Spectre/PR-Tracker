@@ -3,14 +3,14 @@
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd'
 import ColumnHeader from './ColumnHeader'
 import PRCard from '../pr/PRCard'
-import { BoardColumns, PRItem } from '@/lib/types'
+import { BoardColumns, PRItem, DataSet } from '@/lib/types'
 import { useMemo } from 'react'
 
 type Props = {
   initialColumns: BoardColumns
   prs: PRItem[]
   filterProject?: string
-  onChange: (next: { columns: BoardColumns; prs: PRItem[]; projects: { name: string }[] }) => void
+  onChange: (next: DataSet) => void
 }
 
 export default function Board({ initialColumns, prs, filterProject, onChange }: Props) {
@@ -36,7 +36,14 @@ export default function Board({ initialColumns, prs, filterProject, onChange }: 
     const updated: PRItem = { ...pr, status: destination.droppableId as PRItem['status'] }
     const nextPrs = [...prs]
     nextPrs[prIndex] = updated
-    onChange({ columns, prs: nextPrs, projects: [] })
+    
+    // Create a proper DataSet object
+    const projectSet = new Set(nextPrs.filter(p => p.category === 'project').map((p) => p.project))
+    const serviceSet = new Set(nextPrs.filter(p => p.category === 'service' && p.service).map((p) => p.service!))
+    const projects = Array.from(projectSet).map((name) => ({ name, category: 'project' as const }))
+    const services = Array.from(serviceSet).map((name) => ({ name, category: 'service' as const }))
+    
+    onChange({ columns, prs: nextPrs, projects, services })
   }
 
   return (
@@ -46,18 +53,27 @@ export default function Board({ initialColumns, prs, filterProject, onChange }: 
           <div key={col.id} className="flex flex-col min-h-[60vh]">
             <ColumnHeader title={col.title} count={filtered.filter((p) => p.status === col.id).length} />
             <Droppable droppableId={col.id}>
-              {(provided) => (
+              {(provided, snapshot) => (
                 <div
                   ref={provided.innerRef}
                   {...provided.droppableProps}
-                  className="mt-2 flex-1 card p-3 space-y-3"
+                  className={`mt-2 flex-1 card p-3 space-y-3 transition-colors ${
+                    snapshot.isDraggingOver ? 'bg-accent/10 border-accent/40' : ''
+                  }`}
                 >
                   {filtered
                     .filter((p) => p.status === col.id)
                     .map((pr, index) => (
                       <Draggable draggableId={pr.id} index={index} key={pr.id}>
-                        {(dp) => (
-                          <div ref={dp.innerRef} {...dp.draggableProps} {...dp.dragHandleProps}>
+                        {(provided, snapshot) => (
+                          <div
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            {...provided.dragHandleProps}
+                            className={`transition-transform ${
+                              snapshot.isDragging ? 'rotate-2 scale-105 shadow-2xl' : ''
+                            }`}
+                          >
                             <PRCard pr={pr} />
                           </div>
                         )}

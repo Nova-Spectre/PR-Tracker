@@ -3,17 +3,18 @@
 import { useEffect, useMemo, useState } from 'react'
 import Board from '@/components/board/Board'
 import { defaultColumns, emptyDataSet, loadData, saveData } from '@/lib/data'
-import { Plus } from '@/components/icons/Plus'
+import { Plus, Settings } from '@/components/icons'
 import PRModal from '@/components/pr/PRModal'
 import WorkspaceTabs from '@/components/workspaces/WorkspaceTabs'
 import toast, { Toaster } from 'react-hot-toast'
 
 export default function HomePage() {
   const [workspace, setWorkspace] = useState<string>('All Projects')
+  const [category, setCategory] = useState<'all' | 'project' | 'service'>('all')
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [dataVersion, setDataVersion] = useState(0)
 
-  const { columns, prs, projects } = useMemo(() => loadData(), [dataVersion])
+  const { columns, prs, projects, services } = useMemo(() => loadData(), [dataVersion])
 
   useEffect(() => {
     if (!columns || Object.keys(columns).length === 0) {
@@ -21,6 +22,22 @@ export default function HomePage() {
       setDataVersion((v) => v + 1)
     }
   }, [columns])
+
+  const filteredPRs = useMemo(() => {
+    let filtered = prs
+    if (workspace !== 'All Projects') {
+      filtered = filtered.filter(p => 
+        (p.category === 'project' && p.project === workspace) ||
+        (p.category === 'service' && p.service === workspace)
+      )
+    }
+    if (category !== 'all') {
+      filtered = filtered.filter(p => p.category === category)
+    }
+    return filtered
+  }, [prs, workspace, category])
+
+  const allWorkspaces = ['All Projects', ...(projects ?? []).map(p => p.name), ...(services ?? []).map(s => s.name)]
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -31,14 +48,34 @@ export default function HomePage() {
             <span className="text-xl font-semibold">PR Tracker Dashboard</span>
           </div>
           <div className="flex items-center gap-3">
+            <a href="/settings" className="btn">
+              <Settings className="w-4 h-4" />
+              Settings
+            </a>
             <button className="btn btn-primary" onClick={() => setIsModalOpen(true)}>
               <Plus className="w-4 h-4" /> Add PR
             </button>
           </div>
         </div>
-        <div className="max-w-7xl mx-auto px-4 pb-3">
+        <div className="max-w-7xl mx-auto px-4 pb-3 space-y-3">
+          <div className="flex items-center gap-4">
+            <span className="text-sm font-medium">Category:</span>
+            <div className="flex gap-2">
+              {(['all', 'project', 'service'] as const).map((cat) => (
+                <button
+                  key={cat}
+                  className={`px-3 py-1.5 rounded-md border text-sm ${
+                    category === cat ? 'bg-accent/20 border-accent/40' : 'bg-muted border-border hover:bg-border'
+                  }`}
+                  onClick={() => setCategory(cat)}
+                >
+                  {cat === 'all' ? 'All' : cat.charAt(0).toUpperCase() + cat.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
           <WorkspaceTabs
-            workspaces={['All Projects', ...projects.map((p) => p.name)]}
+            workspaces={allWorkspaces}
             active={workspace}
             onChange={setWorkspace}
           />
@@ -48,7 +85,7 @@ export default function HomePage() {
       <main className="max-w-7xl mx-auto w-full px-4 py-6 flex-1">
         <Board
           initialColumns={columns}
-          prs={prs}
+          prs={filteredPRs}
           filterProject={workspace === 'All Projects' ? undefined : workspace}
           onChange={(updated) => {
             saveData(updated)
