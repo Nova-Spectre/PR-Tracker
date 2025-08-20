@@ -6,11 +6,12 @@ import { connectMongo } from './db'
 import PR from '@/models/PR'
 import { BoardColumns, DataSet, PRItem, ColumnId, Category, Priority } from './types'
 
-type Filter = Partial<Pick<PRItem, 'project' | 'status'>>
+type Filter = Partial<Pick<PRItem, 'project' | 'status'>> & { userId?: string }
 
 type DbPR = {
   _id?: any
   id?: string
+  userId?: string
   title: string
   project: string
   service?: string
@@ -51,6 +52,7 @@ export async function getPRs(filter: Filter = {}): Promise<PRItem[]> {
   const cond: Record<string, unknown> = {}
   if (filter.project) cond.project = filter.project
   if (filter.status) cond.status = filter.status
+  if (filter.userId) cond.userId = filter.userId
   console.log('[queries.getPRs] filter(in)=', filter, 'cond=', cond)
   const key = `prs:${JSON.stringify(cond)}`
   const now = Date.now()
@@ -64,10 +66,18 @@ export async function getPRs(filter: Filter = {}): Promise<PRItem[]> {
   return docs.map(mapDoc)
 }
 
-export async function createPR(data: Omit<PRItem, 'id' | 'status'> & { status?: ColumnId }): Promise<PRItem> {
+export async function createPR(data: Omit<PRItem, 'id' | 'status'> & { status?: ColumnId; userId?: string }): Promise<PRItem> {
   await connectMongo()
   const id = new Types.ObjectId().toString()
-  const payload = { id, status: 'initial', ...data }
+  
+  // Convert userId string to ObjectId for MongoDB
+  const payload = { 
+    id, 
+    status: 'initial', 
+    ...data,
+    userId: data.userId ? new Types.ObjectId(data.userId) : undefined
+  }
+  
   console.log('[queries.createPR] payload=', payload)
   const doc = await PR.create(payload)
   console.log('[queries.createPR] created id=', id)
@@ -75,10 +85,11 @@ export async function createPR(data: Omit<PRItem, 'id' | 'status'> & { status?: 
   return mapDoc(doc.toObject())
 }
 
-export async function updatePR(id: string, update: Partial<PRItem>): Promise<PRItem | null> {
+export async function updatePR(id: string, update: Partial<PRItem>, userId?: string): Promise<PRItem | null> {
   await connectMongo()
-  console.log('[queries.updatePR] id=', id, 'update=', update)
-  const doc = await PR.findOneAndUpdate({ id }, update, { new: true }).lean<DbPR | null>()
+  console.log('[queries.updatePR] id=', id, 'update=', update, 'userId=', userId)
+  const query = userId ? { id, userId } : { id }
+  const doc = await PR.findOneAndUpdate(query, update, { new: true }).lean<DbPR | null>()
   console.log('[queries.updatePR] updated? ', !!doc)
   if (!doc) return null
   cache.clear()
@@ -92,10 +103,11 @@ export async function updatePRStatus(id: string, status: ColumnId): Promise<void
   cache.clear()
 }
 
-export async function deletePR(id: string): Promise<void> {
+export async function deletePR(id: string, userId?: string): Promise<void> {
   await connectMongo()
-  console.log('[queries.deletePR] id=', id)
-  await PR.deleteOne({ id })
+  console.log('[queries.deletePR] id=', id, 'userId=', userId)
+  const query = userId ? { id, userId } : { id }
+  await PR.deleteOne(query)
   cache.clear()
 }
 

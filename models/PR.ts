@@ -11,8 +11,9 @@ const LinkSchema = new Schema(
 const PRSchema = new Schema(
   {
     id: { type: String, index: true, unique: true },
+    userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     title: { type: String, required: true },
-    project: { type: String, required: true },
+    project: { type: String },
     service: { type: String },
     category: { type: String, enum: ['project', 'service'], required: true },
     author: { type: String, required: true },

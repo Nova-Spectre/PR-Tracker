@@ -26,37 +26,62 @@ export default function PRModal({ open, onClose, onCreate }: { open: boolean; on
   useEffect(() => {
     if (!open) return
     let cancelled = false
+    
+    // Load data in parallel for better performance
     ;(async () => {
       try {
-        // load defaults
-        try {
-          const dj = await cachedFetchJSON<{ defaults?: any }>('/api/defaults', 300000)
-          const d = dj?.defaults || {}
-          if (!cancelled) {
-            if (d?.defaultProject) setProject(String(d.defaultProject))
-            if (d?.defaultService) setService(String(d.defaultService))
-            if (d?.defaultAuthor) setAuthor(String(d.defaultAuthor))
-          }
-        } catch (_) {}
-        const pJson = await cachedFetchJSON<{ items: any[] }>('/api/workspaces?type=project', 300000)
-        const sJson = await cachedFetchJSON<{ items: any[] }>('/api/workspaces?type=service', 300000)
-        const pItems: any[] = Array.isArray(pJson.items) ? pJson.items : []
-        const sItems: any[] = Array.isArray(sJson.items) ? sJson.items : []
+        // Parallel API calls for better performance
+        const [defaultsResult, projectsResult, servicesResult] = await Promise.all([
+          cachedFetchJSON<{ defaults?: any }>('/api/defaults', 300000).catch(() => ({ defaults: {} })),
+          cachedFetchJSON<{ items: any[] }>('/api/workspaces?type=project', 300000).catch(() => ({ items: [] })),
+          cachedFetchJSON<{ items: any[] }>('/api/workspaces?type=service', 300000).catch(() => ({ items: [] }))
+        ])
+        
+        if (cancelled) return
+        
+        // Process results
+        const defaults = defaultsResult?.defaults || {}
+        const pItems: any[] = Array.isArray(projectsResult.items) ? projectsResult.items : []
+        const sItems: any[] = Array.isArray(servicesResult.items) ? servicesResult.items : []
+        
         const pNames: string[] = Array.from(new Set(pItems.map((x: any) => String(x?.name ?? '')).filter(Boolean)))
         const sNames: string[] = Array.from(new Set(sItems.map((x: any) => String(x?.name ?? '')).filter(Boolean)))
+        
         const pList: string[] = ['General', ...pNames]
         const sList: string[] = [...sNames]
-        if (!cancelled) {
-          setProjects(pList)
-          setServices(sList)
-          if (!pList.includes(project)) setProject(pList[0] || 'General')
+        
+        // Update state in batch to prevent re-renders
+        setProjects(pList)
+        setServices(sList)
+        
+        // Set defaults only if not already set
+        if (defaults?.defaultProject && pList.includes(String(defaults.defaultProject))) {
+          setProject(String(defaults.defaultProject))
+        } else if (!pList.includes(project)) {
+          setProject(pList[0] || 'General')
         }
+        
+        if (defaults?.defaultService && sList.includes(String(defaults.defaultService))) {
+          setService(String(defaults.defaultService))
+        }
+        
+        if (defaults?.defaultAuthor) {
+          setAuthor(String(defaults.defaultAuthor))
+        }
+        
       } catch (e) {
-        // ignore; keep defaults
+        console.warn('Failed to load modal data:', e)
+        // Set minimal defaults on error
+        if (!cancelled) {
+          setProjects(['General'])
+          setServices([])
+          if (project !== 'General') setProject('General')
+        }
       }
     })()
+    
     return () => { cancelled = true }
-  }, [open])
+  }, [open]) // Removed 'project' dependency to prevent infinite loop
 
   if (!open) return null
 
@@ -95,7 +120,7 @@ export default function PRModal({ open, onClose, onCreate }: { open: boolean; on
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" role="dialog" data-modal="true">
       <div className="w-full max-w-2xl card p-6 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold">Add Pull Request</h2>
@@ -202,7 +227,7 @@ export default function PRModal({ open, onClose, onCreate }: { open: boolean; on
         </div>
         {/* Add Project/Service Mini Modal */}
         {showAddWorkspace && (
-          <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" role="dialog" data-modal="true">
             <div className="card p-4 w-full max-w-sm">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-lg font-semibold">Add {showAddWorkspace === 'project' ? 'Project' : 'Service'}</h3>

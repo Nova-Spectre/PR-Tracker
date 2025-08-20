@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import DailyRemindersManager from '@/components/scheduler/DailyRemindersManager'
 import { Calendar, Mail, Settings } from '@/components/icons'
+import ThemeAwareThreeBackground from '@/components/ui/ThemeAwareThreeBackground'
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<'reminders' | 'integrations' | 'defaults' | 'workspaces'>('reminders')
@@ -36,20 +37,27 @@ export default function SettingsPage() {
   }, [])
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <header className="w-full border-b border-border bg-surface/80 backdrop-blur sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Settings className="w-6 h-6" />
-            <span className="text-xl font-semibold">Settings</span>
+    <div className="min-h-screen flex flex-col relative">
+      <ThemeAwareThreeBackground intensity="low" objectCount={8} />
+      <header className="w-full border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-2 sm:px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <Settings className="w-5 h-5 sm:w-6 sm:h-6" />
+            <span className="text-lg sm:text-xl font-semibold">Settings</span>
           </div>
+          <button
+            onClick={() => window.location.href = '/'}
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            ← Back to Dashboard
+          </button>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto w-full px-4 py-6 flex-1">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold mb-2">PR Tracker Settings</h1>
-          <p className="text-subtle">Configure email notifications and calendar integrations</p>
+      <main className="max-w-7xl mx-auto w-full px-2 sm:px-4 py-3 sm:py-6 flex-1 relative z-10">
+        <div className="mb-4 sm:mb-6">
+          <h1 className="text-xl sm:text-2xl font-bold mb-2">PR Tracker Settings</h1>
+          <p className="text-subtle text-sm sm:text-base">Configure email notifications and calendar integrations</p>
         </div>
 
         <div className="flex gap-4 mb-6">
