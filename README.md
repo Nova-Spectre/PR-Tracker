@@ -51,7 +51,7 @@ Create a `.env.local` file in your project root:
 
 ```bash
 # MailerSend Configuration
-MAILERSEND_API_KEY=mlsn.984ee2b92e2c40741357fb28f07d8e5785e882cba5cb3e75bf1d18d49a1fd7d7
+MAILERSEND_API_KEY=APIKEY
 MAILERSEND_FROM_EMAIL=noreply@yourdomain.com
 MAILERSEND_FROM_NAME=PR Tracker
 
