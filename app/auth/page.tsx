@@ -249,7 +249,7 @@ export default function AuthPage() {
                 </li>
                 <li className="flex items-center">
                   <div className="w-2 h-2 bg-green-400 rounded-full mr-3"></div>
-                  Secure cloud sync
+                  Cloud sync
                 </li>
               </ul>
             </div>
