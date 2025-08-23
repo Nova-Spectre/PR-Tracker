@@ -121,7 +121,7 @@ export default function AuthPage() {
               PR Tracker
             </h1>
             <p className="text-gray-300 text-sm sm:text-lg">
-              Secure Dashboard for Pull Request Management
+              Dashboard for Pull Request Management
             </p>
           </div>
 
@@ -225,7 +225,7 @@ export default function AuthPage() {
             {/* Toggle between login/signup */}
             <div className="mt-6 text-center">
               <p className="text-gray-300">
-                {isLogin ? "Don&apos;t have an account?" : "Already have an account?"}
+                {isLogin ? "Don't have an account?" : "Already have an account?"}
                 <button
                   onClick={toggleMode}
                   className="ml-2 text-blue-400 hover:text-blue-300 font-medium transition-colors"
@@ -255,12 +255,7 @@ export default function AuthPage() {
             </div>
           </div>
 
-          {/* Footer */}
-          <div className="text-center mt-8">
-            <p className="text-gray-400 text-sm">
-              Secure authentication with industry-standard encryption
-            </p>
-          </div>
+
         </div>
       </div>
     </div>
