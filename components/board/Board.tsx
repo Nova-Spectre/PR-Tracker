@@ -33,19 +33,42 @@ export default function Board({ initialColumns, prs, filterProject, onChange, gr
     return set.size ? Array.from(set).sort() : ['__all__']
   }, [filtered, groupBy])
 
-  function handleEdit(updated: PRItem) {
+  async function handleEdit(updated: PRItem) {
     const prIndex = prs.findIndex((p) => p.id === updated.id)
     if (prIndex === -1) return
     const nextPrs = [...prs]
     nextPrs[prIndex] = { ...nextPrs[prIndex], ...updated }
+    
+    // Update UI immediately for better UX
     const projectSet = new Set(nextPrs.filter(p => p.category === 'project').map((p) => p.project))
     const serviceSet = new Set(nextPrs.filter(p => p.category === 'service' && p.service).map((p) => p.service!))
     const projects = Array.from(projectSet).map((name) => ({ name, category: 'project' as const }))
     const services = Array.from(serviceSet).map((name) => ({ name, category: 'service' as const }))
     onChange({ columns, prs: nextPrs, projects, services })
+    
+    // Persist changes to database
+    try {
+      const response = await fetch('/api/prs', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updated)
+      })
+      
+      if (!response.ok) {
+        console.error('Failed to update PR in database')
+        // Optionally revert the UI change or show error toast
+      } else {
+        console.log(`PR ${updated.id} updated in database`)
+      }
+    } catch (error) {
+      console.error('Error updating PR:', error)
+      // Optionally revert the UI change or show error toast
+    }
   }
 
-  function handleDragEnd(result: DropResult) {
+  async function handleDragEnd(result: DropResult) {
     const { destination, source, draggableId } = result
     if (!destination) return
     if (
@@ -58,17 +81,42 @@ export default function Board({ initialColumns, prs, filterProject, onChange, gr
     if (prIndex === -1) return
     const pr = prs[prIndex]
 
-    const updated: PRItem = { ...pr, status: destination.droppableId as PRItem['status'] }
+    const newStatus = destination.droppableId as PRItem['status']
+    const updated: PRItem = { ...pr, status: newStatus }
     const nextPrs = [...prs]
     nextPrs[prIndex] = updated
     
-    // Create a proper DataSet object
+    // Update UI immediately for better UX
     const projectSet = new Set(nextPrs.filter(p => p.category === 'project').map((p) => p.project))
     const serviceSet = new Set(nextPrs.filter(p => p.category === 'service' && p.service).map((p) => p.service!))
     const projects = Array.from(projectSet).map((name) => ({ name, category: 'project' as const }))
     const services = Array.from(serviceSet).map((name) => ({ name, category: 'service' as const }))
     
     onChange({ columns, prs: nextPrs, projects, services })
+    
+    // Persist status change to database
+    try {
+      const response = await fetch('/api/prs', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: pr.id,
+          status: newStatus
+        })
+      })
+      
+      if (!response.ok) {
+        console.error('Failed to update PR status in database')
+        // Optionally revert the UI change or show error toast
+      } else {
+        console.log(`PR ${pr.id} status updated to ${newStatus} in database`)
+      }
+    } catch (error) {
+      console.error('Error updating PR status:', error)
+      // Optionally revert the UI change or show error toast
+    }
   }
 
   return (
