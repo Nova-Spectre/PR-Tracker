@@ -36,28 +36,49 @@ export default function HomePage() {
     
     const loadUserData = async () => {
       try {
-        console.log('[ui] bootstrap: loading user PRs from DB')
-        const res = await fetch('/api/prs')
-        if (res.ok) {
-          const { prs } = await res.json()
-          if (Array.isArray(prs)) {
-            const next: DataSet = { columns: defaultColumns, prs, projects: [], services: [] }
-            saveData(next)
-            setData(next)
-            if (prs.length > 0) {
-              toast.success(`Loaded ${prs.length} PRs from your dashboard`)
-            }
-            return
-          }
-        } else if (res.status === 401) {
-          // Authentication expired, redirect to login
+        console.log('[ui] bootstrap: loading user data from DB')
+        
+        // Load PRs and workspaces in parallel
+        const [prsRes, workspacesRes] = await Promise.all([
+          fetch('/api/prs'),
+          fetch('/api/workspaces')
+        ])
+        
+        // Handle authentication errors
+        if (prsRes.status === 401 || workspacesRes.status === 401) {
           router.push('/auth')
           return
         }
-        console.log('[ui] bootstrap: no user PRs, starting with empty board')
-        const seeded: DataSet = { ...emptyDataSet, columns: defaultColumns }
-        saveData(seeded)
-        setData(seeded)
+        
+        // Load PRs
+        let prs: any[] = []
+        if (prsRes.ok) {
+          const prsData = await prsRes.json()
+          if (Array.isArray(prsData.prs)) {
+            prs = prsData.prs
+          }
+        }
+        
+        // Load workspaces (projects and services)
+        let projects: any[] = []
+        let services: any[] = []
+        if (workspacesRes.ok) {
+          const workspacesData = await workspacesRes.json()
+          if (Array.isArray(workspacesData.items)) {
+            projects = workspacesData.items.filter((item: any) => item.type === 'project')
+            services = workspacesData.items.filter((item: any) => item.type === 'service')
+          }
+        }
+        
+        const next: DataSet = { columns: defaultColumns, prs, projects, services }
+        saveData(next)
+        setData(next)
+        
+        if (prs.length > 0 || projects.length > 0 || services.length > 0) {
+          toast.success(`Loaded ${prs.length} PRs, ${projects.length} projects, ${services.length} services`)
+        } else {
+          console.log('[ui] bootstrap: no user data, starting with empty board')
+        }
       } catch (e) {
         console.error('[ui] bootstrap error', e)
         // Ensure UI still works with defaults
@@ -70,16 +91,42 @@ export default function HomePage() {
     loadUserData()
   }, [user, router])
 
+  // Generate workspace filters from existing data (must be before early returns)
+  const projectWorkspaces = useMemo(() => {
+    const configuredProjects = (data.projects ?? []).map(p => p.name).filter((name): name is string => Boolean(name))
+    const usedProjects = [...new Set(data.prs.filter(pr => pr.category === 'project' && pr.project).map(pr => pr.project).filter((project): project is string => Boolean(project)))]
+    return [...new Set([...configuredProjects, ...usedProjects])].sort()
+  }, [data.projects, data.prs])
+
+  const serviceWorkspaces = useMemo(() => {
+    const configuredServices = (data.services ?? []).map(s => s.name).filter((name): name is string => Boolean(name))
+    const usedServices = [...new Set(data.prs.filter(pr => pr.category === 'service' && pr.service).map(pr => pr.service).filter((service): service is string => Boolean(service)))]
+    return [...new Set([...configuredServices, ...usedServices])].sort()
+  }, [data.services, data.prs])
+
   const filteredPRs = useMemo(() => {
     let filtered = data.prs
+    
+    // Filter by workspace (project or service)
     if (workspace !== 'All Projects') {
-      filtered = filtered.filter((pr) => pr.project === workspace)
+      filtered = filtered.filter((pr) => {
+        if (projectWorkspaces.includes(workspace)) {
+          return pr.category === 'project' && pr.project === workspace
+        }
+        if (serviceWorkspaces.includes(workspace)) {
+          return pr.category === 'service' && pr.service === workspace
+        }
+        return false
+      })
     }
+    
+    // Filter by category
     if (category !== 'all') {
       filtered = filtered.filter((pr) => pr.category === category)
     }
+    
     return filtered
-  }, [data.prs, workspace, category])
+  }, [data.prs, workspace, category, projectWorkspaces, serviceWorkspaces])
 
   // Show loading state while checking authentication
   if (loading) {
@@ -99,14 +146,17 @@ export default function HomePage() {
     return null
   }
 
-  const allWorkspaces = ['All Projects', ...(data.projects ?? []).map(p => p.name), ...(data.services ?? []).map(s => s.name)]
+  const allWorkspaces: string[] = ['All Projects', ...projectWorkspaces, ...serviceWorkspaces]
 
   return (
     <div className="min-h-screen bg-background text-text flex flex-col relative">
       <StableThreeBackground intensity="low" objectCount={6} />
-      <header className="border-b border-border bg-card/80 backdrop-blur-sm px-2 sm:px-4 py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 relative z-10">
-        <div className="flex items-center justify-between w-full sm:w-auto">
+      <header className="border-b border-border bg-card/80 backdrop-blur-sm relative z-10">
+        {/* Top Row: Title and Controls */}
+        <div className="px-2 sm:px-4 py-3 flex items-center justify-between">
           <h1 className="text-lg sm:text-xl font-semibold">PR Tracker</h1>
+          
+          {/* Mobile Controls */}
           <div className="flex items-center gap-2 sm:hidden">
             <button
               onClick={() => setIsModalOpen(true)}
@@ -117,72 +167,90 @@ export default function HomePage() {
             </button>
             <ThemeToggle />
           </div>
+          
+          {/* Desktop Controls */}
+          <div className="hidden sm:flex items-center gap-2">
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              Add PR
+            </button>
+            <ShareButton />
+            <ThemeToggle />
+          </div>
         </div>
         
-        {/* Desktop Controls */}
-        <div className="hidden sm:flex items-center gap-2">
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            Add PR
-          </button>
-          <ShareButton />
-          <ThemeToggle />
-        </div>
-        
-        {/* User Info and Controls */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 w-full sm:w-auto">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 w-full sm:w-auto">
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              <label className="text-xs sm:text-sm font-medium whitespace-nowrap">Category:</label>
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value as any)}
-                className="flex-1 sm:flex-none px-2 py-1 border border-border rounded-md bg-card text-text text-xs sm:text-sm min-w-0"
-              >
-                <option value="all">All</option>
-                <option value="project">Projects</option>
-                <option value="service">Services</option>
-              </select>
+        {/* Filters and Workspace Selection Row */}
+        <div className="px-2 sm:px-4 py-2 border-t border-border/50 bg-card/40">
+          <div className="flex flex-col gap-3">
+            {/* Filters Row */}
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+              <div className="flex items-center gap-2">
+                <label className="text-xs sm:text-sm font-medium whitespace-nowrap text-muted-foreground">Category:</label>
+                <select
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value as any)}
+                  className="px-2 py-1 border border-border rounded-md bg-card text-text text-xs sm:text-sm min-w-[80px]"
+                >
+                  <option value="all">All</option>
+                  <option value="project">Projects</option>
+                  <option value="service">Services</option>
+                </select>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <label className="text-xs sm:text-sm font-medium whitespace-nowrap text-muted-foreground">Group by:</label>
+                <select
+                  value={groupBy}
+                  onChange={(e) => setGroupBy(e.target.value as any)}
+                  className="px-2 py-1 border border-border rounded-md bg-card text-text text-xs sm:text-sm min-w-[80px]"
+                >
+                  <option value="none">None</option>
+                  <option value="project">Project</option>
+                  <option value="service">Service</option>
+                </select>
+              </div>
             </div>
             
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              <label className="text-xs sm:text-sm font-medium whitespace-nowrap">Group by:</label>
-              <select
-                value={groupBy}
-                onChange={(e) => setGroupBy(e.target.value as any)}
-                className="flex-1 sm:flex-none px-2 py-1 border border-border rounded-md bg-card text-text text-xs sm:text-sm min-w-0"
-              >
-                <option value="none">None</option>
-                <option value="project">Project</option>
-                <option value="service">Service</option>
-              </select>
+            {/* Workspace Selection Row - Horizontally Scrollable */}
+            <div className="flex items-center gap-3">
+              <span className="text-xs sm:text-sm font-medium text-muted-foreground whitespace-nowrap">Workspaces:</span>
+              <div className="flex-1 min-w-0">
+                <WorkspaceTabs
+                  workspaces={allWorkspaces}
+                  active={workspace}
+                  onChange={setWorkspace}
+                  projectWorkspaces={projectWorkspaces}
+                  serviceWorkspaces={serviceWorkspaces}
+                />
+              </div>
             </div>
           </div>
-          <WorkspaceTabs
-            workspaces={allWorkspaces}
-            active={workspace}
-            onChange={setWorkspace}
-          />
-          {/* User Profile Section */}
-          <div className="flex items-center gap-2 sm:gap-3 sm:ml-4 sm:pl-4 sm:border-l border-border mt-2 sm:mt-0">
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-medium text-xs sm:text-sm">
-                {user.name.charAt(0).toUpperCase()}
-              </div>
-              <div className="text-xs sm:text-sm hidden sm:block">
-                <div className="font-medium">{user.name}</div>
-                <div className="text-muted-foreground text-xs">{user.email}</div>
+        </div>
+        
+        {/* User Profile Section */}
+        <div className="px-2 sm:px-4 py-2 border-t border-border/50 bg-card/20">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-medium text-xs sm:text-sm">
+                  {user.name.charAt(0).toUpperCase()}
+                </div>
+                <div className="text-xs sm:text-sm">
+                  <div className="font-medium">{user.name}</div>
+                  <div className="text-muted-foreground text-xs hidden sm:block">{user.email}</div>
+                </div>
               </div>
             </div>
             <button
               onClick={logout}
-              className="inline-flex items-center gap-1 px-2 py-1 text-xs sm:text-sm text-muted-foreground hover:text-foreground transition-colors"
+              className="inline-flex items-center gap-1 px-2 py-1 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors text-xs sm:text-sm"
               title="Logout"
             >
-              <LogOut className="w-4 h-4" />
+              <LogOut className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">Logout</span>
             </button>
           </div>
         </div>

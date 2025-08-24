@@ -368,33 +368,51 @@ GOOGLE_CALENDAR_ID=primary`}
             </div>
 
             <div className="border-t pt-4">
-              <h4 className="font-medium mb-2">Add Workspace</h4>
-              <div className="flex gap-2 items-center">
-                <select className="input" value={newWs.type} onChange={(e) => setNewWs({ ...newWs, type: e.target.value as any })}>
-                  <option value="project">Project</option>
-                  <option value="service">Service</option>
-                </select>
-                <input className="input flex-1" value={newWs.name} onChange={(e) => setNewWs({ ...newWs, name: e.target.value })} placeholder="Name" />
-                <button
-                  className="btn btn-primary"
-                  onClick={async () => {
-                    try {
-                      const res = await fetch('/api/workspaces', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ name: newWs.name.trim(), type: newWs.type })
-                      })
-                      if (!res.ok && res.status !== 409) throw new Error('Failed')
-                      if (newWs.type === 'project') setProjects((l) => Array.from(new Set([...l, newWs.name.trim()])))
-                      else setServices((l) => Array.from(new Set([...l, newWs.name.trim()])))
-                      setNewWs({ ...newWs, name: '' })
-                    } catch (e) {
-                      alert('Add failed')
-                    }
-                  }}
-                >
-                  Add
-                </button>
+              <h4 className="font-medium mb-3">Add Workspace</h4>
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-2 sm:items-end">
+                <div className="flex-shrink-0">
+                  <label className="block text-xs font-medium text-muted-foreground mb-1">Type</label>
+                  <select 
+                    className="w-full sm:w-32 px-3 py-2 border border-border rounded-md bg-card text-text text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" 
+                    value={newWs.type} 
+                    onChange={(e) => setNewWs({ ...newWs, type: e.target.value as any })}
+                  >
+                    <option value="project">Project</option>
+                    <option value="service">Service</option>
+                  </select>
+                </div>
+                <div className="flex-1">
+                  <label className="block text-xs font-medium text-muted-foreground mb-1">Name</label>
+                  <input 
+                    className="w-full px-3 py-2 border border-border rounded-md bg-card text-text text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" 
+                    value={newWs.name} 
+                    onChange={(e) => setNewWs({ ...newWs, name: e.target.value })} 
+                    placeholder="Enter workspace name" 
+                  />
+                </div>
+                <div className="flex-shrink-0">
+                  <button
+                    className="w-full sm:w-auto px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    disabled={!newWs.name.trim()}
+                    onClick={async () => {
+                      try {
+                        const res = await fetch('/api/workspaces', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ name: newWs.name.trim(), type: newWs.type })
+                        })
+                        if (!res.ok && res.status !== 409) throw new Error('Failed')
+                        if (newWs.type === 'project') setProjects((l) => Array.from(new Set([...l, newWs.name.trim()])))
+                        else setServices((l) => Array.from(new Set([...l, newWs.name.trim()])))
+                        setNewWs({ ...newWs, name: '' })
+                      } catch (e) {
+                        alert('Add failed')
+                      }
+                    }}
+                  >
+                    Add
+                  </button>
+                </div>
               </div>
             </div>
           </div>
