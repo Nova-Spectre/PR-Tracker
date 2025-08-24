@@ -12,6 +12,7 @@ import toast from 'react-hot-toast'
 import ThemeToggle from '@/components/ui/ThemeToggle'
 import { useUser } from '@/lib/UserContext'
 import StableThreeBackground from '@/components/ui/StableThreeBackground'
+import ShareButton from '@/components/ui/ShareButton'
 
 export default function HomePage() {
   const { user, loading, logout } = useUser()
@@ -127,6 +128,7 @@ export default function HomePage() {
             <Plus className="w-4 h-4" />
             Add PR
           </button>
+          <ShareButton />
           <ThemeToggle />
         </div>
         
