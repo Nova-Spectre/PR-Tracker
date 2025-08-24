@@ -1,0 +1,33 @@
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3B82F6"/>
+      <stop offset="100%" style="stop-color:#8B5CF6"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Background circle -->
+  <circle cx="16" cy="16" r="15" fill="url(#bgGradient)"/>
+  
+  <!-- PR/Git branch icon -->
+  <g transform="translate(8, 8)">
+    <!-- Main branch line -->
+    <path d="M4 2 L4 14" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+    
+    <!-- Branch fork -->
+    <path d="M4 6 Q6 6 8 8 L8 12" stroke="white" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+    
+    <!-- Merge arrow -->
+    <path d="M8 10 L10 12 L8 14 L8 12 L6 12" stroke="white" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    
+    <!-- Nodes -->
+    <circle cx="4" cy="2" r="1.2" fill="white"/>
+    <circle cx="8" cy="8" r="1.2" fill="white"/>
+    <circle cx="4" cy="14" r="1.2" fill="white"/>
+  </g>
+  
+  <!-- Status indicators -->
+  <circle cx="24" cy="10" r="1" fill="#10B981"/>
+  <circle cx="24" cy="13" r="1" fill="#F59E0B"/>
+  <circle cx="24" cy="16" r="1" fill="#EF4444"/>
+</svg>

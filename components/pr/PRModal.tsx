@@ -30,11 +30,12 @@ export default function PRModal({ open, onClose, onCreate }: { open: boolean; on
     // Load data in parallel for better performance
     ;(async () => {
       try {
-        // Parallel API calls for better performance
+        // For workspace data, fetch fresh data to ensure newly created workspaces appear
+        // Use regular fetch for workspaces to bypass cache, cached fetch for defaults
         const [defaultsResult, projectsResult, servicesResult] = await Promise.all([
           cachedFetchJSON<{ defaults?: any }>('/api/defaults', 300000).catch(() => ({ defaults: {} })),
-          cachedFetchJSON<{ items: any[] }>('/api/workspaces?type=project', 300000).catch(() => ({ items: [] })),
-          cachedFetchJSON<{ items: any[] }>('/api/workspaces?type=service', 300000).catch(() => ({ items: [] }))
+          fetch('/api/workspaces?type=project').then(r => r.json()).catch(() => ({ items: [] })),
+          fetch('/api/workspaces?type=service').then(r => r.json()).catch(() => ({ items: [] }))
         ])
         
         if (cancelled) return
